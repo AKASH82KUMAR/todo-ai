@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>To‑Do List — GPT‑5 Thinking</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --a:#111827; --b:#0f172a; --c:#1f2937;
+      --txt:#e5e7eb; --mut:#9ca3af; --acc:#8b5cf6; --acc2:#22d3ee; --danger:#ef4444;
+      --ok:#10b981; --warn:#f59e0b; --card:#0d131a;
+      --shadow: 0 10px 30px rgba(0,0,0,.25);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans",
+        "Apple Color Emoji","Segoe UI Emoji"; color:var(--txt); background: radial-gradient(1200px 600px at 20% -10%, #11182730, transparent) , linear-gradient(180deg,#0b0f14,#0a0d12);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .app{
+      width:min(920px,100%); background:linear-gradient(180deg,#0e141c,#0a0f15);
+      border:1px solid #0f1a26; border-radius: calc(var(--radius) + 6px); box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    header{
+      padding:22px 22px 8px; display:flex; gap:12px; align-items:center; justify-content:space-between; background:linear-gradient(180deg,#0e1620,#0a0f15);
+      border-bottom:1px solid #0f1a26;
+    }
+    .brand{ display:flex; gap:12px; align-items:center}
+    .logo{ width:40px; height:40px; border-radius:50%; background:
+      conic-gradient(from 210deg, var(--acc), var(--acc2), var(--acc) 75%, transparent 75%);
+      position:relative; box-shadow: inset 0 0 20px #0008, 0 0 30px #0006;
+      outline: 2px solid #111a; 
+    }
+    .logo::after{ content:""; position:absolute; inset:6px; border-radius:50%; background:#0b0f14; box-shadow: inset 0 0 30px #000a}
+    h1{ font-size:18px; margin:0; letter-spacing:.5px}
+    .muted{ color:var(--mut); font-size:12px}
+    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    button, .chip, select{
+      background:#111a22; border:1px solid #1a2430; color:var(--txt);
+      padding:10px 12px; border-radius:12px; cursor:pointer; transition:.2s transform ease,.2s background,.2s border;
+      font-weight:600;
+    }
+    button:hover, .chip:hover{ transform: translateY(-1px); background:#121c28; border-color:#233042}
+    .chip.active{ border-color:var(--acc2); background:#0e1a22}
+    .danger{ border-color:#2b1a1a; color:#fecaca; background:#1a0f10}
+    .danger:hover{ background:#1d1012; border-color:#3b2020}
+    .ok{ border-color:#0f2a1f; background:#0e1a16; color:#bbf7d0}
+    main{ padding:22px; display:grid; gap:14px}
+    .new{
+      display:grid; grid-template-columns: 1fr 140px 120px auto; gap:8px; align-items:center;
+      background:linear-gradient(180deg,#0b121a,#0a0f15); border:1px solid #0f1a26; border-radius: var(--radius);
+      padding:10px; box-shadow: inset 0 0 0 1px #0a1118;
+    }
+    .new input, .new select{
+      background:#0a1118; border:1px solid #0f1a26; color:var(--txt);
+      padding:12px 12px; border-radius:12px; outline:none; font-size:14px;
+    }
+    .new input::placeholder{ color:#6b7280}
+    .list{ display:grid; gap:10px}
+    .card{
+      display:grid; grid-template-columns: 28px 1fr 130px 100px auto; gap:10px; align-items:center;
+      padding:12px; border:1px solid #122033; border-radius:var(--radius);
+      background:linear-gradient(180deg,#0c121a,#0a0f15);
+      box-shadow: 0 2px 12px #0004;
+    }
+    .card.dragging{ opacity:.6; outline:2px dashed #1f2d3f}
+    .check{ appearance:none; width:20px; height:20px; border-radius:6px; border:1px solid #223043; background:#0a1118; position:relative; cursor:pointer}
+    .check:checked{ background:linear-gradient(180deg,var(--ok),#0a1118); border-color:#21543e}
+    .check:checked::after{ content:"✓"; position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-size:14px}
+    .title{ display:flex; gap:8px; align-items:center}
+    .badge{ font-size:11px; color:#e0e7ff; padding:4px 8px; border-radius:999px; background:#1d2540; border:1px solid #2b3566 }
+    .due{ font-size:12px; color:#bfdbfe}
+    .actions{ display:flex; gap:6px; justify-content:flex-end}
+    .pill{ padding:8px 10px; border:1px dashed #203047; border-radius:999px; font-size:12px}
+    .hidden{ display:none !important }
+    .empty{ color:var(--mut); text-align:center; padding:30px 10px; border:1px dashed #203047; border-radius:var(--radius)}
+    .search{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid #0f1a26; background:#0a1118; color:var(--txt)}
+    @media (max-width:800px){
+      .new{ grid-template-columns: 1fr 120px 100px auto}
+      .card{ grid-template-columns: 28px 1fr 110px 90px auto}
+      .due{ display:none}
+    }
+    footer{ padding:14px 22px; border-top:1px solid #0f1a26; color:var(--mut); display:flex; justify-content:space-between; align-items:center}
+    a{ color: var(--acc2); text-decoration: none }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas; font-size:12px; padding:2px 6px; border-radius:6px; border:1px solid #223; background:#0a1118; color:#cbd5e1}
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="AI‑built To‑Do">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>To‑Do List</h1>
+          <div class="muted">Built by GPT‑5 Thinking • Works offline • Local‑only</div>
+        </div>
+      </div>
+      <div class="controls">
+        <input id="search" class="search" placeholder="Search tasks (title, tag)" />
+        <span class="chip" id="filter-all">All</span>
+        <span class="chip" id="filter-active">Active</span>
+        <span class="chip" id="filter-done">Completed</span>
+        <button id="ai-suggest" title="Generate tasks from a prompt">AI Assist</button>
+        <button id="export">Export</button>
+        <button class="danger" id="clear">Clear All</button>
+      </div>
+    </header>
+    <main>
+      <div class="new" aria-label="Add new task">
+        <input id="title" placeholder="Add a task… (press Enter)" autocomplete="off" />
+        <input type="date" id="due" />
+        <select id="tag">
+          <option value="">No tag</option>
+          <option>Personal</option>
+          <option>Work</option>
+          <option>Study</option>
+          <option>Errand</option>
+        </select>
+        <button class="ok" id="add">Add</button>
+      </div>
+      <div id="list" class="list" aria-live="polite"></div>
+      <div id="empty" class="empty">No tasks yet. Add one above or let <b>AI Assist</b> draft tasks for you.</div>
+    </main>
+    <footer>
+      <div>Drag to reorder • <span class="kbd">Enter</span> to add • <span class="kbd">E</span> to edit • <span class="kbd">Backspace</span> to delete</div>
+      <div id="stats">0 tasks</div>
+    </footer>
+  </div>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const storeKey = "ai-todo-v1";
+  let state = load();
+
+  const listEl = $('#list'), emptyEl = $('#empty'), statsEl = $('#stats');
+  const inputs = { title: $('#title'), due: $('#due'), tag: $('#tag') };
+  const searchEl = $('#search');
+  const filters = {
+    all: $('#filter-all'),
+    active: $('#filter-active'),
+    done: $('#filter-done')
+  };
+  let filter = 'all';
+
+  Object.values(filters).forEach(el => el.classList.remove('active'));
+  filters.all.classList.add('active');
+
+  function uid(){ return Math.random().toString(36).slice(2,9) }
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(storeKey)) || {items:[]} }
+    catch(e){ return {items:[]} }
+  }
+  function save(){ localStorage.setItem(storeKey, JSON.stringify(state)) }
+
+  function add(title, due, tag){
+    if(!title.trim()) return;
+    state.items.unshift({ id: uid(), title: title.trim(), due: due||"", tag: (tag||"").trim(), done:false, created: Date.now() });
+    save(); render();
+  }
+  function toggle(id){ const it = state.items.find(x=>x.id===id); if(it){ it.done=!it.done; save(); render(); } }
+  function del(id){ state.items = state.items.filter(x=>x.id!==id); save(); render(); }
+  function edit(id){
+    const it = state.items.find(x=>x.id===id); if(!it) return;
+    const next = prompt("Edit task title", it.title);
+    if(next===null) return;
+    it.title = next.trim() || it.title;
+    save(); render();
+  }
+  function setFilter(name){
+    filter = name;
+    Object.entries(filters).forEach(([k,el])=> el.classList.toggle('active', k===name));
+    render();
+  }
+  function exportJSON(){
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'todo-data.json';
+    a.click();
+  }
+  function importJSON(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(reader.result);
+        if(obj && Array.isArray(obj.items)){ state = obj; save(); render(); }
+        else alert("Invalid file");
+      }catch(e){ alert("Invalid JSON"); }
+    };
+    reader.readAsText(file);
+  }
+
+  // Tiny AI Assist (on‑device): turns a prompt into tasks using simple heuristics
+  function aiAssist(){
+    const prompt = window.prompt("Describe what you need to get done today (e.g., 'prep for ML interview, buy groceries, gym 6pm')");
+    if(!prompt) return;
+    // Split by punctuation/and/commas and normalize
+    const raw = prompt.split(/[,;]| and | then |\n/gi).map(s=>s.trim()).filter(Boolean);
+    const smartDue = (txt)=>{
+      const d = new Date();
+      const w = txt.match(/tomorrow|tmrw|next day/i) ? 1 :
+                txt.match(/next week/i) ? 7 :
+                txt.match(/today|tonight/i) ? 0 : null;
+      if(w===null) return "";
+      d.setDate(d.getDate()+w);
+      return d.toISOString().slice(0,10);
+    };
+    raw.forEach(t=> add(capitalize(t), smartDue(t), guessTag(t)));
+  }
+  function guessTag(t){
+    t=t.toLowerCase();
+    if(/interview|assignment|lecture|study|exam|course|read/.test(t)) return "Study";
+    if(/buy|pay|bill|grocer|order|appointment/.test(t)) return "Errand";
+    if(/client|deploy|meeting|code|bug|task|email/.test(t)) return "Work";
+    if(/gym|call|family|clean|cook|travel/.test(t)) return "Personal";
+    return "";
+  }
+  function capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1) }
+
+  function render(){
+    const query = (searchEl.value||"").toLowerCase();
+    listEl.innerHTML = "";
+    let items = state.items.slice();
+
+    // apply filter
+    if(filter==='active') items = items.filter(x=>!x.done);
+    if(filter==='done') items = items.filter(x=>x.done);
+
+    // search
+    if(query){
+      items = items.filter(x=> x.title.toLowerCase().includes(query) || (x.tag||"").toLowerCase().includes(query));
+    }
+
+    items.forEach(it=> listEl.appendChild(row(it)));
+
+    emptyEl.classList.toggle('hidden', items.length>0 || state.items.length>0);
+    statsEl.textContent = `${state.items.length} task${state.items.length!==1?'s':''} • ${state.items.filter(x=>x.done).length} done`;
+    listEl.classList.toggle('hidden', items.length===0 && state.items.length>0);
+    if(items.length===0 && state.items.length>0){
+      listEl.innerHTML = '<div class="empty">No tasks match your filters/search.</div>';
+    }
+  }
+
+  function row(it){
+    const el = document.createElement('div');
+    el.className = 'card'; el.draggable = true; el.dataset.id = it.id;
+
+    el.innerHTML = `
+      <input type="checkbox" class="check" ${it.done?'checked':''} aria-label="Mark complete">
+      <div class="title">
+        <div class="pill">${escapeHtml(it.title)}</div>
+        ${it.tag? `<span class="badge">${escapeHtml(it.tag)}</span>`: ''}
+      </div>
+      <div class="due">${it.due? ('Due ' + it.due): ''}</div>
+      <div class="muted">${new Date(it.created).toLocaleDateString()}</div>
+      <div class="actions">
+        <button title="Edit (E)">Edit</button>
+        <button class="danger" title="Delete (Backspace)">Delete</button>
+      </div>
+    `;
+
+    el.querySelector('.check').addEventListener('change', ()=> toggle(it.id));
+    el.querySelector('button:nth-child(1)').addEventListener('click', ()=> edit(it.id));
+    el.querySelector('button:nth-child(2)').addEventListener('click', ()=> del(it.id));
+
+    // keyboard shortcuts when focused
+    el.tabIndex = 0;
+    el.addEventListener('keydown', (e)=>{
+      if(e.key.toLowerCase()==='e'){ e.preventDefault(); edit(it.id); }
+      if(e.key==='Backspace'){ e.preventDefault(); del(it.id); }
+      if(e.key===' '){ e.preventDefault(); toggle(it.id); }
+    });
+
+    // drag & drop reorder
+    el.addEventListener('dragstart', ()=> { el.classList.add('dragging') });
+    el.addEventListener('dragend', ()=> { el.classList.remove('dragging') });
+    el.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      const dragging = $('.card.dragging'); if(!dragging) return;
+      const rect = el.getBoundingClientRect();
+      const next = (e.clientY - rect.top) / rect.height > .5;
+      listEl.insertBefore(dragging, next ? el.nextSibling : el);
+    });
+    el.addEventListener('drop', ()=>{
+      // rebuild order based on DOM
+      const ids = $$('.card').map(c=>c.dataset.id);
+      state.items.sort((a,b)=> ids.indexOf(a.id)-ids.indexOf(b.id));
+      save(); render();
+    });
+
+    return el;
+  }
+
+  // helpers
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])) }
+
+  $('#add').addEventListener('click', ()=> add(inputs.title.value, inputs.due.value, inputs.tag.value));
+  inputs.title.addEventListener('keydown', e=> { if(e.key==='Enter'){ add(inputs.title.value, inputs.due.value, inputs.tag.value); inputs.title.value=''; }});
+  $('#clear').addEventListener('click', ()=> { if(confirm('Clear all tasks?')){ state.items=[]; save(); render(); } });
+  $('#export').addEventListener('click', exportJSON);
+  $('#ai-suggest').addEventListener('click', aiAssist);
+
+  searchEl.addEventListener('input', render);
+  filters.all.addEventListener('click', ()=> setFilter('all'));
+  filters.active.addEventListener('click', ()=> setFilter('active'));
+  filters.done.addEventListener('click', ()=> setFilter('done'));
+
+  // Allow import via file drop
+  document.body.addEventListener('dragover', e=> { e.preventDefault(); });
+  document.body.addEventListener('drop', e=> {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if(file && file.name.endsWith('.json')) importJSON(file);
+  });
+
+  // initial focus
+  inputs.title.focus();
+  render();
+})();
+</script>
+</body>
+</html>
